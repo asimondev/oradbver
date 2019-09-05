@@ -22,7 +22,7 @@ func main() {
 	usr, pwd, role := checkArgs(*u, *p, *r)
 	fmt.Printf("User: %s Password: %s Role: %s\n", usr, pwd, role)
 
-	if len(role) > 0 {
+	if role != "" {
 		role = "sysdba=1&"
 	}
 	sessions := 1
@@ -47,16 +47,16 @@ func checkArgs(usr, pwd, role string) (string, string, string) {
 		log.Fatal("Error: unknown system privilege " + role)
 	}
 
-	if len(usr) > 0 {
-		if len(pwd) == 0 {
+	if usr != "" {
+		if pwd == "" {
 			log.Fatal("Error: password is missing.")
 		}
 	} else {
-		if len(pwd) > 0 {
+		if pwd != "" {
 			log.Fatal("Error: password specified for unknown user.")
 		}
 
-		if len(role) == 0 {
+		if role == "" {
 			role = "sysdba"
 		}
 	}

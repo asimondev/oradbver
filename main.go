@@ -3,25 +3,65 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"gopkg.in/goracle.v2"
 	_ "gopkg.in/goracle.v2"
+	"log"
 	"os"
+	"strings"
 )
 
 func main() {
+	var u = flag.String("u", "", "database user")
+	var p = flag.String("p", "", "user password")
+	var r = flag.String("r", "", "system privilege")
+
+	flag.Parse()
+
+	usr, pwd, role := checkArgs(*u, *p, *r)
+	fmt.Printf("User: %s Password: %s Role: %s\n", usr, pwd, role)
+
+	if len(role) > 0 {
+		role = "sysdba=1&"
+	}
 	sessions := 1
-	con := fmt.Sprintf("oracle://?sysdba=1& "+
-		"poolMinSessions=%d& poolMaxSessions=%d& poolInrement=0", sessions, sessions)
+
+	con := fmt.Sprintf("oracle://?%spoolMinSessions=%d& poolMaxSessions=%d& poolInrement=0",
+		role, sessions, sessions)
 	db, err := sql.Open("goracle", con)
 	if err != nil {
-		fmt.Printf("Error: database connect error %v.", err)
+		fmt.Printf("Error: database connect error %v (%s).", err, con)
 		os.Exit(1)
 	}
 	defer db.Close()
 
 	release, ver := checkVersion(db)
 	writeJSON(release, ver, checkRAC(db), checkCDB(db, ver))
+}
+
+func checkArgs(usr, pwd, role string) (string, string, string) {
+	role = strings.ToLower(role)
+
+	if role != "sysdba" && role != "" {
+		log.Fatal("Error: unknown system privilege " + role)
+	}
+
+	if len(usr) > 0 {
+		if len(pwd) == 0 {
+			log.Fatal("Error: password is missing.")
+		}
+	} else {
+		if len(pwd) > 0 {
+			log.Fatal("Error: password specified for unknown user.")
+		}
+
+		if len(role) == 0 {
+			role = "sysdba"
+		}
+	}
+
+	return usr, pwd, role
 }
 
 func checkVersion(db *sql.DB) (string, int) {

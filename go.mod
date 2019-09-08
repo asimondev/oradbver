@@ -1,5 +1,5 @@
-module /u02/home/oracle/GolandProjects/oradbver
+module oradbver
 
 go 1.12
 
-require gopkg.in/goracle.v2 v2.18.5
+require gopkg.in/goracle.v2 v2.20.1

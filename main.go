@@ -2,8 +2,6 @@ package main
 
 import (
 	"flag"
-	"time"
-
 	//_ "gopkg.in/goracle.v2"
 
 	"oradbver/db"
@@ -25,9 +23,6 @@ func main() {
 	db.ConnectDatabase(cn)
 
 	if (*ping) {
-		for {
-			db.PingDatabase(cn)
-			time.Sleep(1 * time.Second)
-		}
+		db.StartPinging(cn)
 	}
 }

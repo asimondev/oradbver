@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"os"
 	"time"
 )
 
@@ -54,4 +55,25 @@ func getSessionDetails(db *sql.DB) {
 
 	t := time.Now()
 	fmt.Printf("%s  %s\n", t.Format("15:04:05"), d)
+}
+
+func StartPinging(cn *Connect) {
+	abort := make(chan struct{})
+	fmt.Println("\nPress Return to stop the pings...")
+	go func(){
+		os.Stdin.Read(make([]byte, 1)) // read one byte from input
+		abort <- struct{}{}
+	}()
+
+	ticker := time.NewTicker(1 * time.Second)
+
+	for {
+		select {
+			case <-ticker.C:
+				PingDatabase(cn)
+		case <-abort:
+			ticker.Stop()
+			return
+		}
+	}
 }

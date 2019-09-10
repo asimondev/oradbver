@@ -55,7 +55,7 @@ parameter **-ping** pings the specified database every 1 second.
     > ./oradbver -c ~/tmp/db.json
     {"Release":"11.2.0.4","Version":11,"RAC":false,"CDB":false}
 
-#Running oradbver with JSON configuration file and **-ping** option.
+# Running oradbver with JSON configuration file and **-ping** option.
 
     > ./oradbver -c ~/tmp/db.json -ping
     {"Release":"11.2.0.4","Version":11,"RAC":false,"CDB":false}

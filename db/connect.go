@@ -7,6 +7,8 @@ import (
 	"log"
 	"os"
 	"strings"
+
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 type Account struct {
@@ -57,7 +59,12 @@ func (c *Connect) CheckArgs() {
 
 	if c.User != "" {
 		if c.Password == "" {
-			log.Fatal("Error: Password is missing.")
+			fmt.Printf("Enter password: ")
+			pwd, err := terminal.ReadPassword(0)
+			if err != nil {
+				log.Fatal("Error: Password is missing.")
+			}
+			c.Password = string(pwd)
 		}
 	} else {
 		if c.Password != "" {

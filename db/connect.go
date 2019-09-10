@@ -64,6 +64,7 @@ func (c *Connect) CheckArgs() {
 			if err != nil {
 				log.Fatal("Error: Password is missing.")
 			}
+			fmt.Println()
 			c.Password = string(pwd)
 		}
 	} else {

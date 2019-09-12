@@ -36,13 +36,13 @@ parameter **-ping** pings the specified database every 1 second.
 ### Running oradbver without parameters using the internal connect.
 
     > ./oradbver
-    {"Release":"11.2.0.4","Version":11,"RAC":false,"CDB":false}
+    {"Release":"11.2.0.4","Version":11,"RAC":false,"CDB":false,"Role":"PRIMARY"}
 
 ### Running oradbver with parameters.
 
     > ./oradbver -u sys -r sysdba -d a01.world
     Enter password: 
-    {"Release":"11.2.0.4","Version":11,"RAC":false,"CDB":false}
+    {"Release":"11.2.0.4","Version":11,"RAC":false,"CDB":false,"Role":"PRIMARY"}
 
 ### Running oradbver with JSON configuration file.
 
@@ -54,7 +54,7 @@ parameter **-ping** pings the specified database every 1 second.
     }
     
     > ./oradbver -c ~/tmp/db.json
-    {"Release":"11.2.0.4","Version":11,"RAC":false,"CDB":false}
+    {"Release":"11.2.0.4","Version":11,"RAC":false,"CDB":false,"Role":"PRIMARY"}
 
 #### Using remote connect with database name as TNS connection string.
 
@@ -70,7 +70,7 @@ The database value may not contain any whitespace characters.
 ### Running oradbver with JSON configuration file and **-ping** option.
 
     > ./oradbver -c ~/tmp/db.json -ping
-    {"Release":"11.2.0.4","Version":11,"RAC":false,"CDB":false}
+    {"Release":"11.2.0.4","Version":11,"RAC":false,"CDB":false,"Role":"PRIMARY"}
     
     Press Return to stop the pings...
     21:11:36  Inst: a01  Host: hasi  Service: SYS$USERS  Db.Name: a01  Db.Role: PRIMARY

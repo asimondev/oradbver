@@ -6,8 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"gopkg.in/goracle.v2"
-	"log"
-	"os"
 
 	_ "gopkg.in/goracle.v2"
 )
@@ -42,42 +40,55 @@ func NewConnectParams(cn *Connect) *goracle.ConnectionParams {
 	return &cp
 }
 
-func ConnectDatabase(cn *Connect) {
+func ConnectDatabase(cn *Connect) error {
 	cp := NewConnectParams(cn)
 	connString := cp.StringWithPassword()
 	//fmt.Println("Connect string: " + connString)
 
 	db, err := sql.Open("goracle", connString)
 	if err != nil {
-		log.Fatalf("Error: Database open error %v (%s).", err, connString)
+		return fmt.Errorf("Error: Database open error %v (%s).", err, connString)
 	}
 	defer db.Close()
 
 	if err:= db.Ping(); err != nil {
-		log.Fatalf("Error: Database ping error %v.", err)
+		return fmt.Errorf("Error: Database ping error %v.", err)
 	}
 
-	release, ver := checkVersion(db)
-	writeJSON(release, ver, checkRAC(db), checkCDB(db, ver))
+	release, ver, err := checkVersion(db);
+	if err != nil {
+		return err
+	}
+
+	rac, err := checkRAC(db)
+	if err != nil {
+		return err
+	}
+
+	cdb, err := checkCDB(db, ver)
+	if err != nil {
+		return err
+	}
+
+	return writeJSON(release, ver, rac, cdb)
 }
 
-func checkVersion(db *sql.DB) (string, int) {
+func checkVersion(db *sql.DB) (string, int, error) {
 	ver, err := goracle.ServerVersion(context.Background(), db)
 	if err != nil {
-		log.Fatalf("Error: ServerVerion() %v.\n", err)
+		return "", 0, fmt.Errorf("Error: ServerVerion() %v.", err)
 	}
 
 	return fmt.Sprintf("%d.%d.%d.%d", ver.Version, ver.Release, ver.Update,
-		ver.PortRelease), ver.Version
+		ver.PortRelease), ver.Version, nil
 }
 
-func checkRAC(db *sql.DB) bool {
+func checkRAC(db *sql.DB) (bool, error) {
 	stmt := `SELECT value FROM V$PARAMETER WHERE name = 'cluster_database'`
 
 	rows, err := db.Query(stmt)
 	if err != nil {
-		fmt.Printf("Error: checkRAC() %v\n", err)
-		os.Exit(1)
+		return false, fmt.Errorf("Error: checkRAC() %v", err)
 	}
 	defer rows.Close()
 
@@ -87,22 +98,21 @@ func checkRAC(db *sql.DB) bool {
 	}
 
 	if s != "TRUE" {
-		return false
+		return false, nil
 	}
 
-	return true
+	return true, nil
 }
 
-func checkCDB(db *sql.DB, ver int) bool {
+func checkCDB(db *sql.DB, ver int) (bool, error) {
 	if ver < 12 {
-		return false
+		return false, nil
 	}
 
 	stmt := `SELECT cdb FROM V$DATABASE`
 	rows, err := db.Query(stmt)
 	if err != nil {
-		fmt.Printf("Error: checkCDB() %v\n", err)
-		os.Exit(1)
+		return false, fmt.Errorf("Error: checkCDB() %v", err)
 	}
 
 	defer rows.Close()
@@ -113,13 +123,13 @@ func checkCDB(db *sql.DB, ver int) bool {
 	}
 
 	if answer == "NO" {
-		return false
+		return false, nil
 	}
 
-	return true
+	return true, nil
 }
 
-func writeJSON(rel string, ver int, rac, cdb bool) {
+func writeJSON(rel string, ver int, rac, cdb bool) error {
 	type OraVersion struct {
 		Release string
 		Version int
@@ -130,8 +140,10 @@ func writeJSON(rel string, ver int, rac, cdb bool) {
 	var db = OraVersion{Release: rel, Version: ver, RAC: rac, CDB: cdb}
 	data, err := json.Marshal(db)
 	if err != nil {
-		fmt.Printf("Error: Marshal() %v (db: %v).\n", err, db)
-		os.Exit(1)
+		return fmt.Errorf("Error: Marshal() %v (db: %v).", err, db)
 	}
+
 	fmt.Printf("%s\n", data)
+
+	return nil
 }

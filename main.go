@@ -2,6 +2,8 @@ package main
 
 import (
 	"flag"
+	"fmt"
+
 	//_ "gopkg.in/goracle.v2"
 
 	"oradbver/db"
@@ -20,7 +22,9 @@ func main() {
 	cn := db.NewConnect(u, p, r, d, cfg)
 	cn.CheckArgs()
 
-	db.ConnectDatabase(cn)
+	if err:= db.ConnectDatabase(cn); err != nil {
+		fmt.Println(err)
+	}
 
 	if (*ping) {
 		db.StartPinging(cn)

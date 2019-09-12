@@ -3,7 +3,6 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"os"
 	"time"
 )
@@ -25,9 +24,13 @@ func PingDatabase(cn *Connect) {
 	cp := NewConnectParams(cn)
 	connString := cp.StringWithPassword()
 
+	t := time.Now()
+	fmt.Printf("%s  ", t.Format("15:04:05"))
+
 	db, err := sql.Open("goracle", connString)
 	if err != nil {
-		log.Fatalf("Error: Database open error %v (%s).", err, connString)
+		fmt.Printf("database open error %v (%s).", err, connString)
+		return
 	}
 	defer db.Close()
 
@@ -44,7 +47,8 @@ func getSessionDetails(db *sql.DB) {
 
 	rows, err := db.Query(stmt)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Printf("database query error %v", err)
+		return
 	}
 	defer rows.Close()
 
@@ -53,8 +57,7 @@ func getSessionDetails(db *sql.DB) {
 		rows.Scan(&d.Role, &d.UniqueName, &d.InstanceName, &d.Server, &d.Service)
 	}
 
-	t := time.Now()
-	fmt.Printf("%s  %s\n", t.Format("15:04:05"), d)
+	fmt.Printf("%s", d)
 }
 
 func StartPinging(cn *Connect) {
@@ -71,6 +74,7 @@ func StartPinging(cn *Connect) {
 		select {
 			case <-ticker.C:
 				PingDatabase(cn)
+				fmt.Println()
 		case <-abort:
 			ticker.Stop()
 			return

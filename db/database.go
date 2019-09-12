@@ -70,7 +70,12 @@ func ConnectDatabase(cn *Connect) error {
 		return err
 	}
 
-	return writeJSON(release, ver, rac, cdb)
+	role, err := getRole(db)
+	if err != nil {
+		return err
+	}
+
+	return writeJSON(release, ver, rac, cdb, role)
 }
 
 func checkVersion(db *sql.DB) (string, int, error) {
@@ -129,15 +134,34 @@ func checkCDB(db *sql.DB, ver int) (bool, error) {
 	return true, nil
 }
 
-func writeJSON(rel string, ver int, rac, cdb bool) error {
+func getRole(db *sql.DB) (string, error) {
+	stmt := `select sys_context('userenv', 'database_role') from dual`
+
+	rows, err := db.Query(stmt)
+	if err != nil {
+		return "", fmt.Errorf("database query error %v", err)
+	}
+	defer rows.Close()
+
+	var role string
+	for rows.Next() {
+		rows.Scan(&role)
+	}
+
+	return role, nil
+}
+
+func writeJSON(rel string, ver int, rac, cdb bool, role string) error {
 	type OraVersion struct {
 		Release string
 		Version int
 		RAC 	bool
 		CDB		bool
+		Role    string
 	}
 
-	var db = OraVersion{Release: rel, Version: ver, RAC: rac, CDB: cdb}
+	var db = OraVersion{Release: rel, Version: ver, RAC: rac,
+		CDB: cdb, Role: role}
 	data, err := json.Marshal(db)
 	if err != nil {
 		return fmt.Errorf("Error: Marshal() %v (db: %v).", err, db)

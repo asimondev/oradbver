@@ -37,9 +37,9 @@ func PingDatabase(cn *Connect) {
 	getSessionDetails(db)
 }
 
+
 func getSessionDetails(db *sql.DB) {
-	stmt := `select sys_context('userenv', 'database_role'),
-		sys_context('userenv', 'db_unique_name'),
+	stmt := `select sys_context('userenv', 'db_unique_name'),
 		sys_context('userenv', 'instance_name'),
 		sys_context('userenv', 'server_host'),
 		sys_context('userenv', 'service_name')
@@ -54,7 +54,13 @@ func getSessionDetails(db *sql.DB) {
 
 	var d DbDetails
 	for rows.Next() {
-		rows.Scan(&d.Role, &d.UniqueName, &d.InstanceName, &d.Server, &d.Service)
+		rows.Scan(&d.UniqueName, &d.InstanceName, &d.Server, &d.Service)
+	}
+
+	d.Role, err = getRole(db)
+	if err != nil {
+		fmt.Print(err)
+		return
 	}
 
 	fmt.Printf("%s", d)

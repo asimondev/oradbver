@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
 
 	//_ "gopkg.in/goracle.v2"
 
@@ -16,17 +17,21 @@ func main() {
 	var d = flag.String("d", "", "database connect string")
 	var cfg = flag.String("c", "", "JSON config file")
 	var ping = flag.Bool("ping", false, "ping database")
+	var pingOnce = flag.Bool("ping-once", false, "ping database once")
 
 	flag.Parse()
 
 	cn := db.NewConnect(u, p, r, d, cfg)
 	cn.CheckArgs()
 
-	if err:= db.ConnectDatabase(cn); err != nil {
-		fmt.Println(err)
-	}
-
-	if (*ping) {
+	if (*pingOnce) {
+		os.Exit(db.PingOnce(cn))
+	} else if (*ping) {
 		db.StartPinging(cn)
+	} else {
+		err:= db.ConnectDatabase(cn)
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
 }

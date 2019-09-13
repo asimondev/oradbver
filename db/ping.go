@@ -20,7 +20,7 @@ func (d DbDetails) String() string {
 		d.InstanceName, d.Server, d.Service, d.UniqueName, d.Role)
 }
 
-func PingDatabase(cn *Connect) {
+func PingDatabase(cn *Connect) error {
 	cp := NewConnectParams(cn)
 	connString := cp.StringWithPassword()
 
@@ -30,15 +30,15 @@ func PingDatabase(cn *Connect) {
 	db, err := sql.Open("goracle", connString)
 	if err != nil {
 		fmt.Printf("database open error %v (%s).", err, connString)
-		return
+		return err
 	}
 	defer db.Close()
 
-	getSessionDetails(db)
+	return getSessionDetails(db)
 }
 
 
-func getSessionDetails(db *sql.DB) {
+func getSessionDetails(db *sql.DB) error {
 	stmt := `select sys_context('userenv', 'db_unique_name'),
 		sys_context('userenv', 'instance_name'),
 		sys_context('userenv', 'server_host'),
@@ -48,7 +48,7 @@ func getSessionDetails(db *sql.DB) {
 	rows, err := db.Query(stmt)
 	if err != nil {
 		fmt.Printf("database query error %v", err)
-		return
+		return err
 	}
 	defer rows.Close()
 
@@ -60,10 +60,11 @@ func getSessionDetails(db *sql.DB) {
 	d.Role, err = getRole(db)
 	if err != nil {
 		fmt.Print(err)
-		return
+		return err
 	}
 
 	fmt.Printf("%s", d)
+	return nil
 }
 
 func StartPinging(cn *Connect) {
@@ -86,4 +87,14 @@ func StartPinging(cn *Connect) {
 			return
 		}
 	}
+}
+
+func PingOnce(cn *Connect) int{
+	err := PingDatabase(cn);
+	fmt.Println()
+	if err != nil {
+		return 1
+	}
+
+	return 0
 }

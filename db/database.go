@@ -81,7 +81,7 @@ func ConnectDatabase(cn *Connect) error {
 func checkVersion(db *sql.DB) (string, int, error) {
 	ver, err := goracle.ServerVersion(context.Background(), db)
 	if err != nil {
-		return "", 0, fmt.Errorf("Error: ServerVerion() %v.", err)
+		return "", 0, fmt.Errorf("goracle.ServerVerion() %v", err)
 	}
 
 	return fmt.Sprintf("%d.%d.%d.%d", ver.Version, ver.Release, ver.Update,
@@ -90,23 +90,14 @@ func checkVersion(db *sql.DB) (string, int, error) {
 
 func checkRAC(db *sql.DB) (bool, error) {
 	stmt := `SELECT value FROM V$PARAMETER WHERE name = 'cluster_database'`
+	var rac string
 
-	rows, err := db.Query(stmt)
+	err := db.QueryRow(stmt).Scan(&rac)
 	if err != nil {
-		return false, fmt.Errorf("Error: checkRAC() %v", err)
-	}
-	defer rows.Close()
-
-	var s string
-	for rows.Next() {
-		rows.Scan(&s)
+		return false, fmt.Errorf("checkRAC(): %v", err)
 	}
 
-	if s != "TRUE" {
-		return false, nil
-	}
-
-	return true, nil
+	return rac == "TRUE", nil
 }
 
 func checkCDB(db *sql.DB, ver int) (bool, error) {
@@ -114,38 +105,23 @@ func checkCDB(db *sql.DB, ver int) (bool, error) {
 		return false, nil
 	}
 
-	stmt := `SELECT cdb FROM V$DATABASE`
-	rows, err := db.Query(stmt)
-	if err != nil {
-		return false, fmt.Errorf("Error: checkCDB() %v", err)
-	}
-
-	defer rows.Close()
-
 	var answer string
-	for rows.Next() {
-		rows.Scan(&answer)
+	stmt := `SELECT cdb FROM V$DATABASE`
+	err := db.QueryRow(stmt).Scan(&answer)
+	if err != nil {
+		return false, fmt.Errorf("checkCDB(): %v", err)
 	}
 
-	if answer == "NO" {
-		return false, nil
-	}
-
-	return true, nil
+	return answer == "YES", nil
 }
 
 func getRole(db *sql.DB) (string, error) {
-	stmt := `select sys_context('userenv', 'database_role') from dual`
-
-	rows, err := db.Query(stmt)
-	if err != nil {
-		return "", fmt.Errorf("database query error %v", err)
-	}
-	defer rows.Close()
-
 	var role string
-	for rows.Next() {
-		rows.Scan(&role)
+
+	stmt := `select sys_context('userenv', 'database_role') from dual`
+	err := db.QueryRow(stmt).Scan(&role)
+	if err != nil {
+		return "", fmt.Errorf("getRole() %v", err)
 	}
 
 	return role, nil
@@ -164,7 +140,7 @@ func writeJSON(rel string, ver int, rac, cdb bool, role string) error {
 		CDB: cdb, Role: role}
 	data, err := json.Marshal(db)
 	if err != nil {
-		return fmt.Errorf("Error: Marshal() %v (db: %v).", err, db)
+		return fmt.Errorf("writeJSON(): %v (db: %v)", err, db)
 	}
 
 	fmt.Printf("%s\n", data)

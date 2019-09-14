@@ -1,7 +1,6 @@
 package db
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
 	"os"
@@ -73,7 +72,6 @@ func (d DbDetails) String() string {
 func getSessionDetails(db *sql.DB) error {
 	var d DbDetails
 
-	ctx := context.Background()
 	stmt := `select sys_context('userenv', 'db_unique_name'),
 		sys_context('userenv', 'instance_name'),
 		sys_context('userenv', 'server_host'),
@@ -81,7 +79,7 @@ func getSessionDetails(db *sql.DB) error {
 		from dual`
 
 
-	err := db.QueryRowContext(ctx, stmt).Scan(&d.UniqueName, &d.InstanceName, &d.Server, &d.Service)
+	err := db.QueryRow(stmt).Scan(&d.UniqueName, &d.InstanceName, &d.Server, &d.Service)
 	if err != nil {
 		fmt.Printf("database query error %v", err)
 		return err

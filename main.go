@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 
 	//_ "gopkg.in/goracle.v2"
@@ -22,7 +23,9 @@ func main() {
 	flag.Parse()
 
 	cn := db.NewConnect(u, p, r, d, cfg)
-	cn.CheckArgs()
+	if err := cn.CheckArgs(); err != nil {
+		log.Fatal("Error: ", err)
+	}
 
 	if (*pingOnce) {
 		os.Exit(db.PingOnce(cn))

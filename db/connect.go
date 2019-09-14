@@ -2,6 +2,7 @@ package db
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -46,7 +47,7 @@ func (c *Connect) readConfig(cfg string) {
 	}
 }
 
-func (c *Connect) CheckArgs() {
+func (c *Connect) CheckArgs() error {
 	if c.config != "" {
 		c.readConfig(c.config)
 	}
@@ -54,7 +55,7 @@ func (c *Connect) CheckArgs() {
 	c.Role = strings.ToLower(c.Role)
 
 	if c.Role != "" && c.Role != "sysdba" && c.Role != "sysbackup" {
-		log.Fatalf("Error: unknown or unsupported system privilege '%s'.\n", *c)
+		return fmt.Errorf("unknown or unsupported system privilege '%s'", *c)
 	}
 
 	if c.User != "" {
@@ -62,20 +63,26 @@ func (c *Connect) CheckArgs() {
 			fmt.Printf("Enter password: ")
 			pwd, err := terminal.ReadPassword(0)
 			if err != nil {
-				log.Fatal("Error: Password is missing.")
+				return errors.New("password is missing")
 			}
 			fmt.Println()
 			c.Password = string(pwd)
 		}
+
+		if c.Role == "" && strings.ToLower(c.User) == "sys" {
+			c.Role = "sysdba"
+		}
 	} else {
 		if c.Password != "" {
-			log.Fatal("Error: Password specified for unknown User.")
+			return errors.New("password specified for unknown user")
 		}
 
 		if c.Role == "" {
 			c.Role = "sysdba"
 		}
 	}
+
+	return nil
 }
 
 func (c Connect) String() string {

@@ -1,3 +1,4 @@
+// Implements Oracle database access.
 package db
 
 import (
@@ -9,8 +10,6 @@ import (
 
 	_ "gopkg.in/goracle.v2"
 )
-
-var ctx context.Context
 
 func NewConnectParams(cn *Connect) *goracle.ConnectionParams {
 	var cp goracle.ConnectionParams = goracle.ConnectionParams{

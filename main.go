@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"os"
 
@@ -34,7 +33,7 @@ func main() {
 	} else {
 		err:= db.ConnectDatabase(cn)
 		if err != nil {
-			fmt.Println(err)
+			log.Fatal("Error: ", err)
 		}
 	}
 }

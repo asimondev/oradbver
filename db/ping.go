@@ -30,7 +30,7 @@ func StartPinging(cn *Connect) {
 }
 
 func PingOnce(cn *Connect) int{
-	err := PingDatabase(cn);
+	err := PingDatabase(cn)
 	fmt.Println()
 	if err != nil {
 		return 1
@@ -56,7 +56,7 @@ func PingDatabase(cn *Connect) error {
 	return getSessionDetails(db)
 }
 
-type DbDetails struct {
+type PingDetails struct {
 	Role string
 	UniqueName string
 	InstanceName string
@@ -64,13 +64,13 @@ type DbDetails struct {
 	Service string
 }
 
-func (d DbDetails) String() string {
+func (d PingDetails) String() string {
 	return fmt.Sprintf("Inst: %s  Host: %s  Service: %s  Db.Name: %s  Db.Role: %s",
 		d.InstanceName, d.Server, d.Service, d.UniqueName, d.Role)
 }
 
 func getSessionDetails(db *sql.DB) error {
-	var d DbDetails
+	var d PingDetails
 
 	stmt := `select sys_context('userenv', 'db_unique_name'),
 		sys_context('userenv', 'instance_name'),

@@ -1,7 +1,7 @@
 # oradbver
 
 Use this Go program to get the Oracle Database version in JSON format. Additionally the 
-parameter **-ping** pings the specified database every 1 second.
+parameters **-ping** or **-ping-once** ping the specified database every 1 second or just once.
 
  ## Working with oradbver
  
@@ -10,6 +10,10 @@ parameter **-ping** pings the specified database every 1 second.
  oradbver uses the Oracle OCI client library. That means, that either Oracle database software or 
  the client software must be installed. The environment parameters must be set as well. 
  As a test the SQL*Plus must run without any problems.
+ 
+ This Go program is created and tested on Oracle Linux 7 64bit using Oracle Database Release 11.2. 
+ This means, that the uploaded executable **oradbver** can be immediately downloaded and used for the 
+ similar environments without any own build actions. 
  
  ### Parameters
  

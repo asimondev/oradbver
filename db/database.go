@@ -11,7 +11,7 @@ import (
 	_ "gopkg.in/goracle.v2"
 )
 
-type Details struct {
+type Globals struct {
 	Release string
 	Version int
 	RAC 	bool
@@ -19,7 +19,7 @@ type Details struct {
 	Role    string
 }
 
-type Database struct {
+type Vdatabase struct {
 	OpenMode string
 	FlashbackOn string
 	ForceLogging string
@@ -32,8 +32,9 @@ type Database struct {
 }
 
 type ShortDetails struct {
-	Details
-	Database
+	Details Globals
+	Database Vdatabase
+	Instances []Instance
 }
 
 type Instance struct {
@@ -50,11 +51,19 @@ type Component struct {
 	Version string
 	Status string
 }
+
+type Container struct {
+	Name string
+	ID int
+	OpenMode string
+}
+
 type FullDetails struct {
-	Details
-	Database
+	Details Globals
+	Database Vdatabase
 	Instances []Instance
 	Registry []Component
+	Containers []Container
 }
 
 func NewConnectParams(cn *Connect) *goracle.ConnectionParams {
@@ -85,7 +94,7 @@ func NewConnectParams(cn *Connect) *goracle.ConnectionParams {
 	return &cp
 }
 
-func ConnectDatabase(cn *Connect) error {
+func DisplayDetails(cn *Connect, short bool, full bool, pretty bool) (err error) {
 	cp := NewConnectParams(cn)
 	connString := cp.StringWithPassword()
 	//fmt.Println("Connect string: " + connString)
@@ -96,32 +105,85 @@ func ConnectDatabase(cn *Connect) error {
 	}
 	defer db.Close()
 
-	if err:= db.Ping(); err != nil {
+	if err = db.Ping(); err != nil {
 		return fmt.Errorf("database ping error %v", err)
 	}
 
-	//var sd ShortDetails
-	var sd FullDetails
-	if err := getDetails(db, &sd.Details); err != nil {
+	var details interface{}
+	if full {
+		details, err = printFullDetails(db)
+	} else if short {
+		details, err = printShortDetails(db)
+	} else {
+		details, err = printDetails(db)
+	}
+	if err != nil {
 		return err
 	}
 
-	if err := queryDatabase(db, &sd.Database); err != nil {
-		return err
-	}
-
-	if sd.Instances, err = queryInstance(db); err != nil {
-		return err
-	}
-
-	if sd.Registry, err = queryRegistry(db); err != nil {
-		return err
-	}
-	
-	return writeJSON(&sd)
+	return writeJSON(details, pretty)
 }
 
-func getDetails(db *sql.DB, d *Details) (err error) {
+func printDetails(db *sql.DB) (*Globals, error) {
+	var details Globals
+	if err := getDetails(db, &details); err != nil {
+		return nil, err
+	}
+
+	return &details, nil
+}
+
+func printShortDetails(db *sql.DB) (*ShortDetails, error) {
+	var details ShortDetails
+	var err error
+
+	if err = getDetails(db, &details.Details); err != nil {
+		return nil, err
+	}
+
+	if err = queryDatabase(db, &details.Database); err != nil {
+		return nil, err
+	}
+
+	if details.Instances, err = queryInstance(db); err != nil {
+		return nil, err
+	}
+
+	return &details, nil
+}
+
+func printFullDetails(db *sql.DB) (*FullDetails, error) {
+	var details FullDetails
+	var err error
+
+	if err = getDetails(db, &details.Details); err != nil {
+		return nil, err
+	}
+
+	if err = queryDatabase(db, &details.Database); err != nil {
+		return nil, err
+	}
+
+	if details.Instances, err = queryInstance(db); err != nil {
+		return nil, err
+	}
+
+	if details.Registry, err = queryRegistry(db); err != nil {
+		return nil, err
+	}
+
+	if details.Details.Version < 12 {
+		details.Containers = []Container{}
+	} else {
+		if details.Containers, err = queryContainers(db); err != nil {
+			return nil, err
+		}
+	}
+
+	return &details, nil
+}
+
+func getDetails(db *sql.DB, d *Globals) (err error) {
 	d.Release, d.Version, err = checkVersion(db)
 	if err != nil {
 		return err
@@ -182,7 +244,7 @@ func checkCDB(db *sql.DB, ver int) (bool, error) {
 	return answer == "YES", nil
 }
 
-func queryDatabase(db *sql.DB, d *Database) error {
+func queryDatabase(db *sql.DB, d *Vdatabase) error {
 	stmt := `SELECT flashback_on, force_logging, controlfile_type, open_mode, 
 				protection_mode, protection_level, switchover_status, dataguard_broker 
 				FROM V$DATABASE`
@@ -198,7 +260,7 @@ func queryDatabase(db *sql.DB, d *Database) error {
 
 func queryInstance(db *sql.DB) ([]Instance, error) {
 	stmt := `SELECT instance_number, instance_name, host_name, status, parallel,
-				thread# from gv$instance`
+				thread# from gv$instance order by instance_number`
 	rows, err := db.Query(stmt)
 	if err != nil {
 		return nil, fmt.Errorf("query v$instance: %v", err)
@@ -221,7 +283,7 @@ func queryInstance(db *sql.DB) ([]Instance, error) {
 }
 
 func queryRegistry(db *sql.DB) ([]Component, error) {
-	stmt := `SELECT comp_name, version, status from dba_registry`
+	stmt := `SELECT comp_name, version, status from dba_registry order by comp_name`
 	rows, err := db.Query(stmt)
 	if err != nil {
 		return nil, fmt.Errorf("query dba_registry: %v", err)
@@ -242,6 +304,28 @@ func queryRegistry(db *sql.DB) ([]Component, error) {
 	return registry, nil
 }
 
+func queryContainers(db *sql.DB) ([]Container, error) {
+	stmt := `SELECT name, con_id, open_mode from v$containers order by name`
+	rows, err := db.Query(stmt)
+	if err != nil {
+		return nil, fmt.Errorf("query v$containers: %v", err)
+	}
+	defer rows.Close()
+
+	var containers []Container
+	for rows.Next() {
+		var cont Container
+		err := rows.Scan(&cont.Name, &cont.ID, &cont.OpenMode)
+		if err != nil {
+			return nil, fmt.Errorf("fetch containers rows: %v", err)
+		}
+
+		containers = append(containers, cont)
+	}
+
+	return containers, nil
+}
+
 func getRole(db *sql.DB) (string, error) {
 	var role string
 
@@ -254,8 +338,14 @@ func getRole(db *sql.DB) (string, error) {
 	return role, nil
 }
 
-func writeJSON(db *FullDetails) error {
-	data, err := json.Marshal(db)
+func writeJSON(db interface{}, pretty bool) (err error) {
+	var data []byte
+
+	if pretty {
+		data, err = json.MarshalIndent(db, "", "\t")
+	} else {
+		data, err = json.Marshal(db)
+	}
 	if err != nil {
 		return fmt.Errorf("writeJSON(): %v (db: %v)", err, db)
 	}

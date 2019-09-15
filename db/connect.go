@@ -86,7 +86,7 @@ func (c *Connect) CheckArgs() error {
 }
 
 func (c Connect) String() string {
-	return fmt.Sprintf("Connect => User: '%s' Password: '%s' Role: '%s' Database: '%s'.\n",
+	return fmt.Sprintf("Connect => User: '%s' Password: '%s' Role: '%s' Vdatabase: '%s'.\n",
 		c.User, c.Password, c.Role, c.Database)
 }
 

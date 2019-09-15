@@ -21,7 +21,10 @@ parameter **-ping** pings the specified database every 1 second.
  - **-c** JSON configuration file. You can specify all corresponding parameters in this file.
  - **-ping** Start pinging the database every second. You can stop this by pressing Return key.
  - **-ping-once** Ping the database once and exit with usual UNIX (0 or 1) return code.
-  
+ - **-short** Add more details to regular output (V$DATABASE, GV$INSTANCE).
+ - **-full** Add more details to short output (DBA_REGISTRY, V$CONTAINERS).
+  - **-pretty** Print pretty JSON output. 
+    
  Here is an example of the JSON configuration file:
  
     {
@@ -87,3 +90,71 @@ The database value may not contain any whitespace characters.
     21:58:19  database query error username="andrej" sid="" params={authMode:0 connectionClass:<nil> connectionClassLength:0 purity:0 newPassword:<nil> newPasswordLength:0 appContext:<nil> numAppContext:0 externalAuth:0 externalHandle:<nil> pool:<nil> tag:<nil> tagLength:0 matchAnyTag:0 outTag:<nil> outTagLength:0 outTagFound:0 shardingKeyColumns:<nil> numShardingKeyColumns:0 superShardingKeyColumns:<nil> numSuperShardingKeyColumns:0 outNewSession:0}: ORA-01017: invalid username/password; logon denied
     > echo $?
     1
+
+### Running oradbver with **-short** and **-pretty** options.
+If you want to get some columns from V$DATABASE and GV$INSTANCE views, you should use **-short** option.
+
+    > ./oradbver -short
+    {"Details":{"Release":"11.2.0.4","Version":11,"RAC":false,"CDB":false,"Role":"PRIMARY"},"Database":{"OpenMode":"READ WRITE","FlashbackOn":"RESTORE POINT ONLY","ForceLogging":"NO","ControlfileType":"CURRENT","ProtectionMode":"","ProtectionLevel":"MAXIMUM PERFORMANCE","SwitchoverStatus":"NOT ALLOWED","DataGuardBroker":"DISABLED"},"Instances":[{"InstanceNumber":1,"InstanceName":"a01","HostName":"hasi","Status":"OPEN","Parallel":"NO","ThreadNumber":1}]}
+
+The output above is not very friendly. If you want to get this better formatted, you should specify
+**-pretty** option.
+    
+    > ./oradbver -short -pretty
+    {
+        "Details": {
+            "Release": "11.2.0.4",
+            "Version": 11,
+            "RAC": false,
+            "CDB": false,
+            "Role": "PRIMARY"
+        },
+        "Database": {
+            "OpenMode": "READ WRITE",
+            "FlashbackOn": "RESTORE POINT ONLY",
+            "ForceLogging": "NO",
+            "ControlfileType": "CURRENT",
+            "ProtectionMode": "",
+            "ProtectionLevel": "MAXIMUM PERFORMANCE",
+            "SwitchoverStatus": "NOT ALLOWED",
+            "DataGuardBroker": "DISABLED"
+        },
+        "Instances": [
+            {
+                "InstanceNumber": 1,
+                "InstanceName": "a01",
+                "HostName": "hasi",
+                "Status": "OPEN",
+                "Parallel": "NO",
+                "ThreadNumber": 1
+            }
+        ]
+    }
+     
+### Running oradbver with **-full** option.
+    > ./oradbver -full        
+    {"Details":{"Release":"12.2.0.1","Version":12,"RAC":false,"CDB":true,"Role":"PRIMARY"},"Database":{"OpenMode":"READ WRITE","FlashbackOn":"NO","ForceLogging":"NO","ControlfileType":"CURRENT","ProtectionMode":"","ProtectionLevel":"MAXIMUM PERFORMANCE","SwitchoverStatus":"NOT ALLOWED","DataGuardBroker":"DISABLED"},"Instances":[{"InstanceNumber":1,"InstanceName":"fcdb1","HostName":"hasi","Status":"OPEN","Parallel":"NO","ThreadNumber":1}],"Registry":[{"Name":"JServer JAVA Virtual Machine","Version":"12.2.0.1.0","Status":"VALID"},{"Name":"OLAP Analytic Workspace","Version":"12.2.0.1.0","Status":"VALID"},{"Name":"Oracle Database Catalog Views","Version":"12.2.0.1.0","Status":"VALID"},{"Name":"Oracle Database Java Packages","Version":"12.2.0.1.0","Status":"VALID"},{"Name":"Oracle Database Packages and Types","Version":"12.2.0.1.0","Status":"VALID"},{"Name":"Oracle Database Vault","Version":"12.2.0.1.0","Status":"VALID"},{"Name":"Oracle Label Security","Version":"12.2.0.1.0","Status":"VALID"},{"Name":"Oracle Multimedia","Version":"12.2.0.1.0","Status":"VALID"},{"Name":"Oracle OLAP API","Version":"12.2.0.1.0","Status":"VALID"},{"Name":"Oracle Real Application Clusters","Version":"12.2.0.1.0","Status":"OPTION OFF"},{"Name":"Oracle Text","Version":"12.2.0.1.0","Status":"VALID"},{"Name":"Oracle Workspace Manager","Version":"12.2.0.1.0","Status":"VALID"},{"Name":"Oracle XDK","Version":"12.2.0.1.0","Status":"VALID"},{"Name":"Oracle XML Database","Version":"12.2.0.1.0","Status":"VALID"},{"Name":"Spatial","Version":"12.2.0.1.0","Status":"VALID"}],"Containers":[{"Name":"CDB$ROOT","ID":1,"OpenMode":"READ WRITE"},{"Name":"FCDB1_PDB1","ID":3,"OpenMode":"READ WRITE"},{"Name":"FCDB1_PDB2","ID":4,"OpenMode":"READ WRITE"},{"Name":"FCDB1_PDB3","ID":6,"OpenMode":"READ WRITE"},{"Name":"PDB$SEED","ID":2,"OpenMode":"READ ONLY"}]}
+
+### Using Linux tool jq to parse JSON output from oradbver.
+Usually you would use **-short** and **-full** options to get all details and pipe then to **jq**. This 
+allows you to select specific database details without using SQL*Plus. These are some examples of
+using **jq**:
+
+Get database release only:
+
+    > ./oradbver | jq '.Release'
+    "12.2.0.1"
+    
+Get database open mode from the the short output:
+
+    > ./oradbver -short | jq '.Database.OpenMode'
+    "READ WRITE"
+
+Get PDB names from the full output:
+    
+    > ./oradbver -full | jq '.Containers[].Name'
+    "CDB$ROOT"
+    "FCDB1_PDB1"
+    "FCDB1_PDB2"
+    "FCDB1_PDB3"
+    "PDB$SEED"
